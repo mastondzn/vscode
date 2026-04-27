@@ -200,10 +200,23 @@ export class SessionsWelcomeContribution extends Disposable implements IWorkbenc
 		// the welcome completion marker is still set (session exists but is
 		// unusable). Only triggers after the user has previously completed
 		// sign-in — avoids firing during initial load.
+		//
+		// The first autorun evaluation is skipped to avoid a false positive:
+		// if entitlement starts as non-Unknown (e.g. Unresolved from cache)
+		// and then transitions to Unknown on the first network check, we
+		// don't want to re-show the walkthrough during normal startup.
+		let isFirstRun = true;
 		let wasSignedIn = false;
 		this._register(autorun(reader => {
 			this.chatEntitlementService.entitlementObs.read(reader);
 			const entitlement = this.chatEntitlementService.entitlement;
+			if (isFirstRun) {
+				isFirstRun = false;
+				if (entitlement !== ChatEntitlement.Unknown) {
+					wasSignedIn = true;
+				}
+				return;
+			}
 			if (entitlement !== ChatEntitlement.Unknown) {
 				wasSignedIn = true;
 				return;
